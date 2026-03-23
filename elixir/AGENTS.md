@@ -55,6 +55,24 @@ mix specs.check
 mix pr_body.check --file /path/to/pr_body.md
 ```
 
+## Nix Fallback for Toolchain
+
+When `mise install` fails (e.g., missing system build dependencies for Erlang
+compilation), use Nix with exact version attributes:
+
+```bash
+nix shell nixpkgs#elixir_1_19 nixpkgs#erlang_28
+```
+
+Avoid generic `nixpkgs#elixir` / `nixpkgs#erlang` — they resolve to older versions
+that don't match `mise.toml` pins.
+
+## Known Lint Debt
+
+- `lib/symphony_elixir/codex/dynamic_tool.ex` — `normalize_sync_workpad_args/1`
+  exceeds Credo's cyclomatic complexity limit (11 > 9). Refactor into smaller
+  helpers when touching this module.
+
 ## Docs Update Policy
 
 If behavior/config changes, update docs in the same PR:
