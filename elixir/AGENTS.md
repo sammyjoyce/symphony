@@ -73,6 +73,25 @@ that don't match `mise.toml` pins.
   exceeds Credo's cyclomatic complexity limit (11 > 9). Refactor into smaller
   helpers when touching this module.
 
+## Staying Synced with Upstream openai/symphony
+
+This is a fork of [openai/symphony](https://github.com/openai/symphony). Before
+merging upstream, verify fork parity with targeted greps — faster than a full diff:
+
+```bash
+grep -r "ssh\.ex" lib/                           # SSH support
+grep -r "PathSafety\|canonicalize" lib/           # Path safety module
+grep -r "protocol_message_candidate" lib/         # JSON filtering
+grep -r "tick_token\|retry_token" lib/            # Token reconciliation
+```
+
+- Use `librarian` (or `git log` on a shallow clone) to read upstream commit history
+  and per-commit diffs without maintaining a full second checkout.
+- Build a commit-level comparison table (upstream SHA → present / absent / N/A)
+  before any cherry-pick or merge.
+- Upstream CI-only changes (e.g., pinned GitHub Actions SHAs) are N/A when the fork
+  uses its own `.github/` workflows — skip without merging.
+
 ## Docs Update Policy
 
 If behavior/config changes, update docs in the same PR:
