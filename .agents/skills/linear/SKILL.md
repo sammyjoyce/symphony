@@ -168,6 +168,40 @@ mutation($input: IssueRelationCreateInput!) {
 
 Input: `issueId`, `relatedIssueId`, `type` (`blocks` or `related`).
 
+### Relation direction and dependency chains
+
+`blocks` means "A blocks B" — A must complete before B can start. When A is a
+child issue and B is its parent epic, the child blocks the epic.
+
+For multi-phase epic chains, wire **stepwise** dependencies only:
+
+```
+Phase 1 ← children block it
+Phase 2 ← children block it, Phase 1 blocks it
+Phase 3 ← children block it, Phase 2 blocks it
+```
+
+Do not add long-range relations (e.g., Phase 1 → Phase 3) — they are redundant
+and create noise. If you find redundant long-range relations, delete them with:
+
+```graphql
+mutation($id: String!) {
+  issueRelationDelete(id: $id) { success }
+}
+```
+
+Verify the final graph: each epic should be blocked only by its direct children
+plus the immediately preceding phase epic.
+
+## Bulk operations
+
+When updating many issues (state transitions, label changes, relation wiring):
+
+1. **Page with cursors** — `limit: 20` + `cursor` avoids truncation on large lists.
+2. **Dry-run first** — verify ID resolution on a single issue before bulk execution.
+3. **Log results** — redirect output to a temp file for post-verification.
+4. **Verify after** — re-query to confirm zero remaining issues in the old state.
+
 ## Rules
 
 - **No introspection.** Never use `__type` or `__schema` queries. They return
