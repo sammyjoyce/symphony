@@ -92,6 +92,35 @@ grep -r "tick_token\|retry_token" lib/            # Token reconciliation
 - Upstream CI-only changes (e.g., pinned GitHub Actions SHAs) are N/A when the fork
   uses its own `.github/` workflows — skip without merging.
 
+## Dispatch Pipeline Invariants (Learned 2026-03-30)
+
+`should_dispatch_issue?` in `orchestrator.ex` gates every dispatch. An issue
+dispatches only when **all** of these hold:
+
+1. **`candidate_issue?`** — issue state is in `active_states` and not terminal;
+   issue is assigned to a routable worker (assignee filter).
+2. **`!todo_issue_blocked_by_non_terminal?`** — for Todo issues, every
+   `blocked_by` relation must reference an issue in a `terminal_states` state.
+   A single non-terminal blocker blocks dispatch.
+3. **Not already `claimed` or `running`** in orchestrator state.
+4. **Slots available** — global `max_concurrent_agents`, per-state limits
+   (`max_concurrent_agents_for_state`), and worker-level limits all checked.
+
+### Project slug filter
+
+`fetch_candidate_issues` in `linear/client.ex` filters by `project_slug` from
+WORKFLOW.md's `tracker` config. Issues that lack a project assignment (even if
+they belong to the right team) are **invisible** to the poll — always assign
+the project explicitly on child issues, not just the parent epic.
+
+### Blocker state is the only dispatch gate (upstream)
+
+This upstream repo checks blocker **state** only (`non_terminal?`). Fork
+variants (e.g., HAR) may add PR-merge verification gates
+(`terminal_blocker_merge_verified?` / `PullRequestVerifier`). When porting
+fork-specific gates back upstream, add them as composable verifier functions
+passed to `todo_issue_blocked_by_non_terminal?`, not as inline conditionals.
+
 ## Docs Update Policy
 
 If behavior/config changes, update docs in the same PR:
